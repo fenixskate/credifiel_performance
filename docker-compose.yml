@@ -1,0 +1,6 @@
+services:
+  qa-automation:
+    build: .
+    shm_size: '2gb'
+    volumes:
+      - ./output:/workspace/output

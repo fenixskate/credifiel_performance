@@ -1,0 +1,2 @@
+Cuenta|Fecha De Operación|Fecha|Referencia|Descripción|Cod. Transac|Sucursal|Depósitos|Retiros|Saldo|Movimiento|Descripción Detallada|Cheque
+0206807292|27/10/2026|27/10/2026|0000000000|ABONO C.AUT.COB.RET.TOTAL|015|0373|$MODIFICAR A CANTIDAD|$0.00|$MODIFICAR A CANTIDAD|54799|SERV.COBRO TOTAL DE CARGOS  EMISORA:00496, NO. DE REGISTROS:     11

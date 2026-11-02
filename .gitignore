@@ -1,0 +1,11 @@
+target/
+output/
+tmp/
+.idea/
+.vscode/
+*.iml
+.env
+.dockerignore
+.gitattributes
+.github/
+PruebaTecnica.zip
