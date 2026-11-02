@@ -440,9 +440,9 @@ Característica: Flujos de compra en SauceDemo
 
     Ejemplos:
       | usuario                              | banco     | archivo                    |
-      | polet.valdes@credifiel.com.mx        | BBVA      | Layout_domi_bbva.xlsx      |
-      | fernanda.jimenez@credifiel.com.mx    | Banamex   | Layout_domi_banamex.xlsx   |
-      | josafat.urbina@credifiel.com.mx      | Santander | Layout_domi_santander.xlsx |
+      | jaime.diaz@credifiel.com.mx          | BBVA      | Layout_domi_bbva.xlsx      |
+      | armando.sanchez@credifiel.com.mx     | Banamex   | Layout_domi_banamex.xlsx   |
+      | laura.sanchez@credifiel.com.mx       | Santander | Layout_domi_santander.xlsx |
 
   @web @CP06
   Esquema del escenario: Reembolsos masivos para <usuario>
@@ -467,6 +467,6 @@ Característica: Flujos de compra en SauceDemo
 
     Ejemplos:
       | usuario                            | archivo                        |
-      | polet.valdes@credifiel.com.mx      | reembolsos_desde_captura.xlsx |
+      | hector.torres@credifiel.com.mx     | reembolsos_desde_captura.xlsx |
 
 
