@@ -82,6 +82,10 @@ public final class ReembolsosSteps {
         actions().avanzarAprobado();
     }
 
+    @Entonces("los registros del reembolso están En confirmación STP o Rechazado")
+    public void validarEstatusDetalle() {
+        actions().validarEstatusDetalle();
+    }
     @Entonces("el reembolso masivo queda en la etapa {string}")
     public void validarEtapa(String etapa) {
         actions().validarEtapa(etapa);

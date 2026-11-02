@@ -463,10 +463,11 @@ Característica: Flujos de compra en SauceDemo
     Cuando el usuario avanza el reembolso a Liberación
     Entonces el reembolso masivo queda en la etapa "Liberación"
     Cuando el usuario avanza el reembolso a Aprobado
-    Entonces el reembolso masivo queda en la etapa "Aprobado"
+    Entonces los registros del reembolso están En confirmación STP o Rechazado
 
     Ejemplos:
       | usuario                            | archivo                        |
-      | hector.torres@credifiel.com.mx     | reembolsos_desde_captura.xlsx |
+      | maricruz.angeles@credifiel.com.mx     | reembolsos_desde_captura.xlsx  |
+
 
 

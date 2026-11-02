@@ -107,6 +107,7 @@ public final class ReembolsosPage {
     public void avanzarAprobado() {
         elements.click(ReembolsosSelectors.AVANZAR_APROBADO);
         esperarSinCarga();
+
     }
 
     public void validarEtapa(String etapa) {
@@ -119,6 +120,52 @@ public final class ReembolsosPage {
         System.out.println("[REEMBOLSOS] Reembolso masivo en " + etapa);
     }
 
+    public void validarEstatusDetalle() {
+        By tabla = By.xpath("//table[contains(@class,'o_list_table')][.//th[@data-name='cf_estatus_det']]");
+        java.util.concurrent.atomic.AtomicReference<java.util.List<String>> observados =
+                new java.util.concurrent.atomic.AtomicReference<>(java.util.List.of());
+        long[] ultimoRefresco = {System.nanoTime()};
+        boolean[] refrescado = {false};
+        int segundos = Integer.getInteger("reembolsos.estatus.timeout.seconds", 300);
+        if (segundos <= 0) throw new IllegalArgumentException("El tiempo de espera de reembolsos debe ser positivo");
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(segundos))
+                    .ignoring(StaleElementReferenceException.class).until(d -> {
+                boolean cargando = d.findElements(By.cssSelector(
+                        ".o_loading_indicator, .o_blockUI, .blockUI.blockOverlay"))
+                        .stream().anyMatch(WebElement::isDisplayed);
+                if (cargando) return false;
+                if (System.nanoTime() - ultimoRefresco[0] >= Duration.ofSeconds(10).toNanos()) {
+                    System.out.println("[REEMBOLSOS] Reconsultando estados tras esperar procesamiento: " + observados.get());
+                    d.navigate().refresh();
+                    ultimoRefresco[0] = System.nanoTime();
+                    refrescado[0] = true;
+                    return false;
+                }
+                if (!refrescado[0]) return false;
+                var tablas = d.findElements(tabla).stream().filter(WebElement::isDisplayed).toList();
+                if (tablas.size() != 1) return false;
+                var filas = tablas.getFirst().findElements(By.cssSelector("tbody tr.o_data_row"))
+                        .stream().filter(WebElement::isDisplayed).toList();
+                if (filas.isEmpty()) return false;
+                var estados = new java.util.ArrayList<String>();
+                for (WebElement fila : filas) {
+                    var celdas = fila.findElements(By.cssSelector("td[name='cf_estatus_det']"));
+                    estados.add(celdas.size() == 1 ? celdas.getFirst().getText().trim() : "SIN ESTATUS");
+                }
+                observados.set(java.util.List.copyOf(estados));
+                return estados.stream().map(this::normalizar)
+                        .allMatch(e -> e.equals("en confirmacion stp") || e.equals("rechazado"));
+            });
+        } catch (TimeoutException e) {
+            throw new AssertionError("La tabla de reembolsos debe contener registros y todos deben estar "
+                    + "En confirmación STP o Rechazado. Estados visibles: " + observados.get(), e);
+        }
+        long rechazados = observados.get().stream().map(this::normalizar).filter("rechazado"::equals).count();
+        System.out.println("[REEMBOLSOS] Detalle validado: " + observados.get().size()
+                + " filas visibles | En confirmación STP=" + (observados.get().size() - rechazados)
+                + " | Rechazado=" + rechazados);
+    }
     private String normalizar(String texto) {
         return Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
                 .trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");

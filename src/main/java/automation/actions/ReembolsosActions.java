@@ -66,6 +66,10 @@ public final class ReembolsosActions {
         page.avanzarAprobado();
     }
 
+    public void validarEstatusDetalle() {
+        page.validarEstatusDetalle();
+    }
+
     public void validarEtapa(String etapa) {
         page.validarEtapa(etapa);
     }
