@@ -8,7 +8,7 @@ Característica: Promesas y conciliacion por usuario
 
     Dado que el usuario está en la página de login
     Y El usuario inicia sesion con "<usuario>"
-    Y el usuario actualiza los 20 archivos de promesas desde el Universo de Cartera
+    Y el usuario actualiza los 40 archivos de promesas desde el Universo de Cartera
 
     Cuando el usuario ingresa a Carga Masiva de Promesas de Pago
     Y el usuario "<usuario>" sube el archivo de promesas "<promesas>"
@@ -62,24 +62,24 @@ Característica: Promesas y conciliacion por usuario
       | usuario                             | promesas                                | bancario       |
       | rogelio.nernandez@credifiel.com.mx  | Template de Carga de Promesas v2.xlsx   | AZTECA_QA.xlsx |
       | alma.hernandez@credifiel.com.mx     | Template de Carga de Promesas v2_2.xlsx | AZTECA_QA.xlsx |
-      | eduardo.martinez@credifiel.com.mx   | Template de Carga de Promesas v2_3.xlsx | AZTECA_QA.xlsx |
+      | santiago.moreno@credifiel.com.mx    | Template de Carga de Promesas v2_3.xlsx | AZTECA_QA.xlsx |
       | david.hernandez@credifiel.com.mx    | Template de Carga de Promesas v2_4.xlsx | AZTECA_QA.xlsx |
       | andrea.garcia@credifiel.com.mx      | Template de Carga de Promesas v2_5.xlsx | AZTECA_QA.xlsx |
 
       | rogelio.nernandez@credifiel.com.mx  | Template de Carga de Promesas v2_6.xlsx  | AZTECA_QA.xlsx |
       | alma.hernandez@credifiel.com.mx     | Template de Carga de Promesas v2_7.xlsx  | AZTECA_QA.xlsx |
-      | eduardo.martinez@credifiel.com.mx   | Template de Carga de Promesas v2_8.xlsx  | AZTECA_QA.xlsx |
+      | santiago.moreno@credifiel.com.mx    | Template de Carga de Promesas v2_8.xlsx  | AZTECA_QA.xlsx |
       | david.hernandez@credifiel.com.mx    | Template de Carga de Promesas v2_9.xlsx  | AZTECA_QA.xlsx |
       | andrea.garcia@credifiel.com.mx      | Template de Carga de Promesas v2_10.xlsx | AZTECA_QA.xlsx |
 
       | rogelio.nernandez@credifiel.com.mx  | Template de Carga de Promesas v2_11.xlsx | AZTECA_QA.xlsx |
       | alma.hernandez@credifiel.com.mx     | Template de Carga de Promesas v2_12.xlsx | AZTECA_QA.xlsx |
-      | eduardo.martinez@credifiel.com.mx   | Template de Carga de Promesas v2_13.xlsx | AZTECA_QA.xlsx |
+      | santiago.moreno@credifiel.com.mx    | Template de Carga de Promesas v2_13.xlsx | AZTECA_QA.xlsx |
       | david.hernandez@credifiel.com.mx    | Template de Carga de Promesas v2_14.xlsx | AZTECA_QA.xlsx |
       | andrea.garcia@credifiel.com.mx      | Template de Carga de Promesas v2_15.xlsx | AZTECA_QA.xlsx |
 
       | rogelio.nernandez@credifiel.com.mx  | Template de Carga de Promesas v2_16.xlsx | AZTECA_QA.xlsx |
       | alma.hernandez@credifiel.com.mx     | Template de Carga de Promesas v2_17.xlsx | AZTECA_QA.xlsx |
-      | eduardo.martinez@credifiel.com.mx   | Template de Carga de Promesas v2_18.xlsx | AZTECA_QA.xlsx |
+      | santiago.moreno@credifiel.com.mx    | Template de Carga de Promesas v2_18.xlsx | AZTECA_QA.xlsx |
       | david.hernandez@credifiel.com.mx    | Template de Carga de Promesas v2_19.xlsx | AZTECA_QA.xlsx |
       | andrea.garcia@credifiel.com.mx      | Template de Carga de Promesas v2_20.xlsx | AZTECA_QA.xlsx |
