@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.*;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 
 public class ExcelUtils {
@@ -55,6 +57,18 @@ public class ExcelUtils {
                 throw new IOException(
                         "No existe la columna Referencia");
             }
+
+            // A2 debe contener la fecha de cada ejecución, incluso al reutilizar el maestro.
+            Row filaFecha = hoja.getRow(1);
+            if (filaFecha == null) {
+                filaFecha = hoja.createRow(1);
+            }
+            Cell celdaFecha = filaFecha.getCell(0, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            celdaFecha.setCellValue(LocalDate.now(ZoneId.of("America/Mexico_City")));
+            CellStyle estiloFecha = workbook.createCellStyle();
+            estiloFecha.cloneStyleFrom(celdaFecha.getCellStyle());
+            estiloFecha.setDataFormat(workbook.createDataFormat().getFormat("dd/MM/yyyy"));
+            celdaFecha.setCellStyle(estiloFecha);
 
             for (int i = 1; i <= hoja.getLastRowNum(); i++) {
 

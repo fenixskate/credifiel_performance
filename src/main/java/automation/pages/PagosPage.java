@@ -33,6 +33,10 @@ public final class PagosPage {
             String nombreDependencia,
             String pagaduria) {
 
+        automation.utils.BrowserConciliationReport.set("Dependencia", nombreDependencia);
+        automation.utils.BrowserConciliationReport.set("Pagaduria", pagaduria);
+        automation.utils.BrowserConciliationReport.set("Periodo", periodo);
+
         new automation.utils.OdooNavigation(driver).open(automation.utils.OdooMenu.PAGOS);
 
         // Crear nuevo registro
@@ -137,6 +141,22 @@ public final class PagosPage {
                 "ARR",
                 archivo
         ).toAbsolutePath().normalize();
+
+        automation.utils.BrowserConciliationReport.set("ArchivoARR", archivo);
+        try (var input = java.nio.file.Files.newInputStream(rutaArchivo);
+             var workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(input)) {
+            long records = 0;
+            var formatter = new org.apache.poi.ss.usermodel.DataFormatter();
+            for (var row : workbook.getSheetAt(0)) {
+                if (row.getRowNum() == 0) continue;
+                for (var cell : row) {
+                    if (!formatter.formatCellValue(cell).isBlank()) { records++; break; }
+                }
+            }
+            automation.utils.BrowserConciliationReport.set("RegistrosArchivo", records);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("No se pudo contar el ARR para el reporte web: " + archivo, e);
+        }
 
         elements.upload(
                 PagosSelectors.SUBIR_ARCHIVO,

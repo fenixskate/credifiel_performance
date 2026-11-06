@@ -22,9 +22,9 @@ public class PromesasSteps {
         actions().ingresarModulo();
     }
 
-    @Y("el usuario actualiza los 20 archivos de promesas desde el Universo de Cartera")
-    public void actualizarArchivosPromesas() throws Exception {
-        automation.utils.PreparacionPromesas.actualizarUnaVez(DriverManager.getDriver());
+    @Y("el usuario actualiza los {int} archivos de promesas desde el Universo de Cartera")
+    public void actualizarArchivosPromesas(int cantidad) throws Exception {
+        automation.utils.PreparacionPromesas.actualizarUnaVez(DriverManager.getDriver(),cantidad);
     }
 
     @Y("el usuario sube el archivo de promesas {string}")

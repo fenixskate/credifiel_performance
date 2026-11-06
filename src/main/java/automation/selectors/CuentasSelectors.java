@@ -221,6 +221,21 @@ public final class CuentasSelectors {
     public static final By ESTATUS_PROCESO =
             By.cssSelector("td[name='estatus']");
 
+    public static final By DEPENDENCIA_PROCESO =
+            By.cssSelector("td[name='cf_dependencia_id']");
+
+    public static final By EJECUTOR_PROCESO =
+            By.cssSelector("td[name='cf_ejecutado_por']");
+
+    public static final By USUARIO_VISIBLE =
+            By.cssSelector(".oe_topbar_name");
+
+    public static final By CONCILIACIONES_TOTALES =
+            By.cssSelector(".o_form_view [name='total_conciliaciones']");
+
+    public static final By CONCILIACIONES_REALIZADAS =
+            By.cssSelector(".o_form_view [name='total_conciliaciones_realizadas']");
+
 
     // Nuevo modal de advertencia
     public static final By MODAL_ADVERTENCIA_CONCILIACION =

@@ -12,6 +12,9 @@ import automation.utils.ScreenshotUtils;
 public class Hooks {
     @Before("@web")
     public void startBrowser(Scenario scenario) {
+        automation.utils.BrowserConciliationReport.begin();
+        if (scenario.getSourceTagNames().contains("@flujoNomina") && scenario.getName().contains(" / "))
+            automation.utils.BrowserConciliationReport.set("Dependencia", scenario.getName().substring(scenario.getName().lastIndexOf(" / ") + 3));
         scenario.log("Inicio: " + scenario.getName());
         scenario.log("Modo de navegador: " + (UserSessions.enabled() ? "porUsuario (conserva sesion entre filas)" : "aislado (cierra por fila)"));
         if (!UserSessions.enabled()) DriverManager.start();
@@ -19,6 +22,8 @@ public class Hooks {
 
     @AfterStep("@web")
     public void attachScreenshot(Scenario scenario) {
+        byte[] measurement = automation.utils.BrowserConciliationReport.takeAttachment();
+        if (measurement != null) scenario.attach(measurement, "text/csv", "Medicion de conciliacion web");
         if (!DriverManager.isStarted()) return;
         if (scenario.isFailed()) {
             try {
@@ -67,8 +72,10 @@ public class Hooks {
     }
 
     public void closeBrowser() {
-        if (UserSessions.enabled()) UserSessions.release();
-        else DriverManager.quit();
+        try {
+            if (UserSessions.enabled()) UserSessions.release();
+            else DriverManager.quit();
+        } finally { automation.utils.BrowserConciliationReport.clear(); }
         System.out.println("[FLUJO] Escenario liberado; navegador disponible para otra fila | " + Thread.currentThread().getName());
     }
 

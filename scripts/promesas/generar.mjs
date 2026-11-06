@@ -25,10 +25,11 @@ for(let index=0;index<manifest.names.length;index++) {
     if(current[r][0]!==credits[r-1]) throw new Error('Crédito incorrecto');
     if(JSON.stringify(current[r].slice(1))!==JSON.stringify(original[r].slice(1))) throw new Error('Cambió otra columna');
   }
+  if(current.flat().some(value=>typeof value==='string'&&/^#(?:REF!|DIV\/0!|VALUE!|NAME\?|N\/A|NUM!|NULL!|SPILL!|CALC!)/.test(value)))throw new Error('Error de formula en '+name);
   const image=await wb.render({sheetName:sheet.name,range:'A1:H6',scale:1,format:'png'});
   await fs.writeFile(path.join(work,'previews',String(index+1).padStart(2,'0')+'.png'),new Uint8Array(await image.arrayBuffer()));
   const output=await SpreadsheetFile.exportXlsx(wb);
   await output.save(path.join(staged,name));
-  console.log(`PREPARADO ${index+1}/20 | ${name} | 500 créditos únicos`);
+  console.log(`PREPARADO ${index+1}/${manifest.names.length} | ${name} | 500 créditos únicos`);
 }
-console.log('Los 20 archivos están preparados para la verificación independiente antes de reemplazar los originales.');
+console.log(`Los ${manifest.names.length} archivos están preparados para la verificación independiente antes de reemplazar los originales.`);

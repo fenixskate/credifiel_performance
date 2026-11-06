@@ -10,14 +10,20 @@ import org.openqa.selenium.WebDriver;
 /** Una preparación compartida por todas las filas CP03 de la misma corrida. */
 public final class PreparacionPromesas {
     private static CompletableFuture<Path> preparacion;
+    private static int cantidadPreparada;
     private PreparacionPromesas() {}
 
     public static Path actualizarUnaVez(WebDriver driver) throws Exception {
+        return actualizarUnaVez(driver,Integer.getInteger("promesas.archivos",40));
+    }
+    public static Path actualizarUnaVez(WebDriver driver,int cantidad) throws Exception {
+        if(cantidad<1)throw new IllegalArgumentException("Cantidad de archivos invalida");
         CompletableFuture<Path> resultado;
         boolean encargado;
         synchronized (PreparacionPromesas.class) {
             encargado = preparacion == null;
-            if (encargado) preparacion = new CompletableFuture<>();
+            if (encargado) {preparacion = new CompletableFuture<>();cantidadPreparada=cantidad;}
+            else if(cantidadPreparada!=cantidad)throw new IllegalStateException("La preparacion compartida solicita "+cantidadPreparada+" archivos, no "+cantidad);
             resultado = preparacion;
         }
         if (encargado) {
@@ -31,13 +37,13 @@ public final class PreparacionPromesas {
                     throw new IllegalStateException("No se encontró el runtime de hojas de cálculo; configura promesas.runtime.root");
                 Path trabajo = Path.of("target", "preparacion-promesas", UUID.randomUUID().toString()).toAbsolutePath();
                 Files.createDirectories(trabajo);
-                System.out.println("[PREPARACION PROMESAS] Generando Universo y actualizando 20 archivos una sola vez");
+                System.out.println("[PREPARACION PROMESAS] Generando Universo y actualizando "+cantidad+" archivos una sola vez");
                 Path reporte = new UniversoCarteraPage(driver).generarYDescargar();
-                ejecutar(trabajo, "seleccion", python.toString(), "scripts/promesas/preparar.py", reporte.toString(), trabajo.toString());
+                ejecutar(trabajo, "seleccion", python.toString(), "scripts/promesas/preparar.py", reporte.toString(), trabajo.toString(),String.valueOf(cantidad));
                 ejecutar(trabajo, "generacion", node.toString(), "scripts/promesas/generar.mjs", trabajo.toString(), modules.toString());
                 ejecutar(trabajo, "verificacion", python.toString(), "scripts/promesas/verificar_publicar.py", trabajo.toString());
                 resultado.complete(trabajo);
-                System.out.println("[PREPARACION PROMESAS] LISTO: 20 archivos, 500 activos por archivo, 10000 créditos únicos");
+                System.out.println("[PREPARACION PROMESAS] LISTO: "+cantidad+" archivos, 500 activos por archivo, "+(cantidad*500)+" creditos unicos");
             } catch (Exception | Error failure) {
                 resultado.completeExceptionally(failure);
                 throw failure;

@@ -33,13 +33,14 @@ for index,name in enumerate(m['names']):
     assert a.freeze_panes==b.freeze_panes, f'Cambiaron paneles: {name}'
     assert set(map(str,a.merged_cells.ranges))==set(map(str,b.merged_cells.ranges)), f'Cambiaron celdas combinadas: {name}'
     old.close();new.close()
-assert len(all_ids)==10000 and len(set(all_ids))==10000, 'Hay créditos duplicados'
+expected_total=len(m['names'])*500
+assert len(all_ids)==expected_total and len(set(all_ids))==expected_total, 'Hay créditos duplicados'
 for name in m['names']:
     destination=Path(m['directory'])/name
     temporary=destination.with_name(destination.stem+'.actualizando.xlsx')
     shutil.copy2(staged/name,temporary)
     temporary.replace(destination)
-report={'resultado':'PASS','archivos':20,'registros_por_archivo':500,'activos_unicos':10000,
+report={'resultado':'PASS','archivos':len(m['names']),'registros_por_archivo':500,'activos_unicos':expected_total,
         'sin_duplicados':True,'otras_columnas_conservadas':True,'respaldo':m['backup'],'reporte':m['source']}
 (work/'verificacion.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps(report,ensure_ascii=False))

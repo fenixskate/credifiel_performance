@@ -41,7 +41,7 @@ public class MovimientosPage {
     private java.nio.file.Path descargaExportada;
 
     private static final Path CARPETA_AZTECA = Path.of(
-            "C:\\Users\\Cuevita\\Documents\\GIT\\PruebaTecnica\\Documentos\\Azteca_Descargados");
+            System.getProperty("user.dir"), "Documentos", "Azteca_Descargados");
 
     private long inicioConciliacion;
     private long finConciliacion;

@@ -9,3 +9,40 @@ tmp/
 .gitattributes
 .github/
 PruebaTecnica.zip
+
+# Binario local de k6 y resultados/insumos de ejecucion
+tools/k6/
+output/k6/
+
+# Implementacion API y carga k6: conservar local, no publicar
+/src/**/api/
+/src/**/k6/
+/scripts/k6/
+/src/test/java/runners/*ApiRunner.java
+/src/test/java/runners/*K6Runner.java
+/src/test/java/reports/*Api*.java
+/src/test/java/verification/*Api*.java
+/src/test/java/verification/*K6*.java
+/src/test/java/verification/Cp01BrowserNetwork.java
+/src/test/java/verification/ExtrajudicialParallelSmoke.java
+/src/test/java/verification/NominaWaveCorrelationSmoke.java
+/src/test/resources/features/*-api.feature
+/src/test/resources/config/*-api-*.json
+/src/test/resources/config/*-api.json
+
+# Documentacion, insumos generados y logs exclusivos de API
+/Documentos/*API*.md
+/Documentos/k6*.md
+/Documentos/Layout Deposito/layouts_generados/k6_*.xlsx
+/*api*.log
+/promesas40-validation-after-repair.log
+
+# Archivos Excel generados y descargados del flujo 4
+/Documentos/Insumos Flujo 4/AZTECA_generados/*.xlsx
+/Documentos/Insumos Flujo 4/Azteca_Descargados/*.xlsx
+
+# Layouts bancarios locales, incluidos los generados
+/Documentos/Layout Deposito/
+
+# Grafo generado localmente: incluye relaciones de la implementacion API
+/graphify-out/

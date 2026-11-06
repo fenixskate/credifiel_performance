@@ -87,6 +87,13 @@ public final class ScenarioPdfReporter implements ConcurrentEventListener {
         });
         publisher.registerHandlerFor(TestStepFinished.class, event -> {
             ScenarioEvidence evidence = active.get(event.getTestCase().getId());
+            if (evidence.tags.contains("@web") && event.getResult().getError() != null) {
+                try { automation.utils.BrowserConciliationReport.failure(event.getResult().getError()); }
+                catch (RuntimeException reportError) {
+                    event.getResult().getError().addSuppressed(reportError);
+                    System.err.println("[CSV WEB] No se pudo registrar el fallo: " + reportError);
+                }
+            }
             if (event.getTestStep() instanceof PickleStepTestStep) {
                 StepEvidence step = evidence.current();
                 step.result = event.getResult();

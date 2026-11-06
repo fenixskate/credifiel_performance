@@ -5,6 +5,8 @@ import automation.selectors.CuentasSelectors;
 import automation.utils.ElementActions;
 import automation.utils.ExcelUtils;
 import automation.utils.WaitUtils;
+import automation.utils.BrowserConciliationReport;
+import automation.utils.PaymentStateWait;
 
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -12,14 +14,8 @@ import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 public final class CuentasPage {
 
@@ -29,7 +25,6 @@ public final class CuentasPage {
 
     private long inicioConciliacion;
     private long finConciliacion;
-    private String procesoConciliacion;
 
     private String referenciaCapturada;
 
@@ -257,6 +252,8 @@ public final class CuentasPage {
     public void importarLayoutBancario(String usuario)
             throws IOException {
 
+        BrowserConciliationReport.set("Usuario", usuario);
+
         // 1. Generar primero el Excel
         Path carpetaBase = Path.of(
                 System.getProperty("user.dir"),
@@ -412,8 +409,10 @@ public final class CuentasPage {
 
     public void validarEstadoSinIdentificar() {
 
-        WebDriverWait espera = crearEspera(
-                Duration.ofMinutes(10));
+        Duration limite = Duration.ofSeconds(PaymentStateWait.positive("web.transaction.timeout.seconds", 1200));
+        WebDriverWait espera = crearEspera(limite);
+
+        BrowserConciliationReport.waiting("Importacion de transaccion bancaria", limite);
 
         espera.pollingEvery(Duration.ofSeconds(10));
 
@@ -444,6 +443,8 @@ public final class CuentasPage {
         System.out.println(
                 "[OK] Referencia capturada: " +
                         referenciaCapturada);
+        BrowserConciliationReport.set("Referencia", referenciaCapturada);
+        BrowserConciliationReport.endWait();
     }
 
     // =====================================================
@@ -520,7 +521,8 @@ public final class CuentasPage {
 
     public void seleccionarTransaccion() {
 
-        WebDriverWait espera = crearEspera(Duration.ofSeconds(60));
+        Duration limite = Duration.ofSeconds(PaymentStateWait.positive("web.transaction.timeout.seconds", 1200));
+        WebDriverWait espera = crearEspera(limite);
 
         espera.pollingEvery(Duration.ofMillis(500));
 
@@ -532,6 +534,12 @@ public final class CuentasPage {
 
         By filasReferencia =
                 CuentasSelectors.filasPorReferencia(referenciaCapturada);
+
+        BrowserConciliationReport.waiting("Aparicion de transaccion bancaria", limite);
+        new PaymentStateWait(driver).until(filasReferencia,
+                "Transaccion bancaria " + referenciaCapturada, limite);
+        BrowserConciliationReport.waiting("Seleccion del recibo bancario", Duration.ofSeconds(60));
+        espera = crearEspera(Duration.ofSeconds(60));
 
         // 1. Identificar el número de recibo mayor
         long mayorRecibo = espera.until(d -> {
@@ -567,6 +575,7 @@ public final class CuentasPage {
 
         System.out.println(
                 "[OK] No. Recibo mayor: " + mayorRecibo);
+        BrowserConciliationReport.endWait();
 
         // 2. Seleccionar únicamente la fila con el recibo mayor
         By checkbox = CuentasSelectors.checkboxPorReferenciaYRecibo(
@@ -635,6 +644,10 @@ public final class CuentasPage {
     }
 
     public void ingresarCuentaDestino(String nombreCuenta) {
+
+        BrowserConciliationReport.set("Cuenta", nombreCuenta);
+        if (BrowserConciliationReport.get("Dependencia").isBlank() && nombreCuenta.contains("|"))
+            BrowserConciliationReport.set("Dependencia", obtenerNombreBusqueda(nombreCuenta));
 
         esperarModalCerrado();
 
@@ -852,6 +865,9 @@ public final class CuentasPage {
             String periodo,
             String pagaduria) {
 
+        BrowserConciliationReport.set("Periodo", periodo);
+        BrowserConciliationReport.set("Pagaduria", pagaduria);
+
         elements.type(
                 CuentasSelectors.PERIODO_CONCILIACION,
                 periodo);
@@ -882,9 +898,17 @@ public final class CuentasPage {
         WebDriverWait espera = crearEspera(Duration.ofSeconds(60));
 
         inicioConciliacion = 0;
+        finConciliacion = 0;
+        driver.findElements(CuentasSelectors.USUARIO_VISIBLE).stream().filter(WebElement::isDisplayed)
+                .findFirst().ifPresent(user -> BrowserConciliationReport.set("UsuarioVisible", user.getText().trim()));
 
-        // 1. Clic en Conciliar
-        elements.click(CuentasSelectors.BOTON_CONCILIAR);
+        // 1. Preparar el boton antes de iniciar el cronometro.
+        BrowserConciliationReport.waiting("Disponibilidad del boton Conciliar", TIMEOUT);
+        WebElement botonConciliar = crearEspera().until(
+                ExpectedConditions.elementToBeClickable(CuentasSelectors.BOTON_CONCILIAR));
+        inicioConciliacion = BrowserConciliationReport.startConciliation(Duration.ofSeconds(
+                PaymentStateWait.positive("web.conciliation.timeout.seconds", 1800)));
+        botonConciliar.click();
         System.out.println("[OK] Clic en Conciliar");
 
         // 2. Esperar el modal Confirmación
@@ -952,8 +976,7 @@ public final class CuentasPage {
             return null;
         });
 
-        // 4. Iniciar medición desde la primera confirmación
-        inicioConciliacion = System.nanoTime();
+        // El cronometro conserva el inicio del clic en Conciliar.
 
         String textoAceptar = aceptar.getText().trim();
         aceptar.click();
@@ -1132,14 +1155,10 @@ public final class CuentasPage {
 
     public void validarConciliacionCompleta() {
 
-        // Iniciar cronómetro al entrar al Step
-        long inicio = System.nanoTime();
-
-        WebDriverWait espera = crearEspera(
-                Duration.ofMinutes(60));
-
-        espera.pollingEvery(Duration.ofSeconds(4));
-        espera.ignoring(StaleElementReferenceException.class);
+        if (inicioConciliacion == 0) throw new IllegalStateException("No se ejecuto el clic en Conciliar para esta medicion");
+        long inicio = inicioConciliacion;
+        Duration limite = Duration.ofSeconds(PaymentStateWait.positive("web.conciliation.timeout.seconds", 1800));
+        BrowserConciliationReport.waiting("Identificacion del proceso de conciliacion", Duration.ofSeconds(60));
 
         // 1. Identificar el proceso más reciente por ID
         String idProceso = crearEspera(
@@ -1152,6 +1171,13 @@ public final class CuentasPage {
                     CuentasSelectors.FILAS_CONCILIACION)) {
 
                 try {
+                    String dependencia = BrowserConciliationReport.get("Dependencia");
+                    if (!dependencia.isBlank() && !fila.findElement(CuentasSelectors.DEPENDENCIA_PROCESO)
+                            .getText().trim().equals(dependencia)) continue;
+                    String ejecutor = BrowserConciliationReport.get("UsuarioVisible");
+                    if (!ejecutor.isBlank() && !fila.findElement(CuentasSelectors.EJECUTOR_PROCESO)
+                            .getText().trim().equalsIgnoreCase(ejecutor)) continue;
+
                     String nombre = fila.findElement(
                                     CuentasSelectors.ID_PROCESO)
                             .getText().trim();
@@ -1181,7 +1207,13 @@ public final class CuentasPage {
                 "[OK] Proceso más reciente: " + idProceso);
 
         System.out.println(
-                "[TIEMPO] Iniciando medición: " + idProceso);
+                "[TIEMPO] Medicion desde el clic en Conciliar: " + idProceso);
+
+        BrowserConciliationReport.set("Proceso", idProceso);
+        BrowserConciliationReport.resumeConciliation(limite);
+        WebDriverWait espera = crearEspera(Duration.ofNanos(Math.max(1,
+                limite.toNanos() - (System.nanoTime() - inicio))));
+        espera.pollingEvery(Duration.ofSeconds(PaymentStateWait.positive("web.conciliation.poll.seconds", 4)));
 
         try {
 
@@ -1229,9 +1261,16 @@ public final class CuentasPage {
                                         CuentasSelectors.ESTATUS_PROCESO)
                                 .getText().trim();
 
+                        BrowserConciliationReport.set("TransaccionesProcesadas", actual);
+                        BrowserConciliationReport.set("TransaccionesTotales", total);
+                        BrowserConciliationReport.set("Avance", porcentaje);
+
                         double duracionSegundos =
                                 (System.nanoTime() - inicio)
                                         / 1_000_000_000.0;
+
+                        if (System.nanoTime() - inicio >= limite.toNanos())
+                            throw new TimeoutException("La conciliacion no se confirmo dentro de " + limite.toSeconds() + " segundos");
 
                         System.out.printf(
                                 "[CONCILIACION] %s | %.0f%% | %d/%d | %s | Tiempo: %.3f s%n",
@@ -1249,6 +1288,7 @@ public final class CuentasPage {
                                 && estatus.equalsIgnoreCase("Conciliado")) {
 
                             long fin = System.nanoTime();
+                            finConciliacion = fin;
 
                             duracionSegundos =
                                     (fin - inicio) / 1_000_000_000.0;
@@ -1260,14 +1300,6 @@ public final class CuentasPage {
                             System.out.printf(
                                     "[TIEMPO] Duración: %.3f segundos%n",
                                     duracionSegundos);
-
-                            // 4. Guardar métricas en CSV
-                            guardarMetricasConciliacion(
-                                    idProceso,
-                                    actual,
-                                    total,
-                                    duracionSegundos,
-                                    "EXITO");
 
                             return true;
                         }
@@ -1295,10 +1327,18 @@ public final class CuentasPage {
                 return false;
             });
 
+            // Leer el formulario despues de cerrar la medicion, sin incluir su navegacion.
+            BrowserConciliationReport.waiting("Lectura de contadores de conciliacion", Duration.ofSeconds(60));
+            leerContadoresConciliacion(idProceso);
+            BrowserConciliationReport.success(finConciliacion);
+
+        } catch (RuntimeException e) {
+            BrowserConciliationReport.failure(e);
+            throw e;
         } finally {
 
             double duracionSegundos =
-                    (System.nanoTime() - inicio)
+                    ((finConciliacion > 0 ? finConciliacion : System.nanoTime()) - inicio)
                             / 1_000_000_000.0;
 
             System.out.printf(
@@ -1310,96 +1350,25 @@ public final class CuentasPage {
 
 
 
-    private void guardarMetricasConciliacion(
-            String idProceso,
-            long procesadas,
-            long total,
-            double duracionSegundos,
-            String estado) {
-
-        // Fecha de ejecución
-        String fecha = LocalDateTime.now().format(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-
-        // Identificar el hilo de ejecución
-        String hilo = Thread.currentThread().getName();
-
-        String encabezado =
-                "Fecha,Hilo,Proceso,Procesadas,Total,Avance,DuracionSegundos,Estado\n";
-
-        String fila = String.format(
-                Locale.ROOT,
-                "%s,%s,%s,%d,%d,100,%.3f,%s%n",
-                fecha,
-                hilo,
-                idProceso,
-                procesadas,
-                total,
-                duracionSegundos,
-                estado);
-
-        synchronized (CuentasPage.class) {
-
-            try {
-                // Obtener la carpeta de evidencias de la ejecución actual
-                Path archivoRuta = Path.of(
-                        System.getProperty("user.dir"),
-                        "target",
-                        "current-run.txt");
-
-                if (Files.notExists(archivoRuta)) {
-                    throw new IllegalStateException(
-                            "No se encontró la ruta de evidencias: "
-                                    + archivoRuta);
-                }
-
-                String rutaEvidencias = Files.readString(
-                        archivoRuta).trim();
-
-                if (rutaEvidencias.isBlank()) {
-                    throw new IllegalStateException(
-                            "La ruta de evidencias está vacía");
-                }
-
-                // Misma carpeta que utiliza ScenarioPdfReporter
-                Path carpetaEvidencias = Path.of(rutaEvidencias);
-
-                if (!carpetaEvidencias.isAbsolute()) {
-                    carpetaEvidencias = Path.of(
-                                    System.getProperty("user.dir"))
-                            .resolve(carpetaEvidencias);
-                }
-
-                Path reporte = carpetaEvidencias.resolve(
-                        "metricas_cp02.csv");
-
-                Files.createDirectories(carpetaEvidencias);
-
-                // Crear archivo con encabezados si no existe
-                if (Files.notExists(reporte)) {
-                    Files.writeString(
-                            reporte,
-                            encabezado,
-                            StandardOpenOption.CREATE_NEW);
-                }
-
-                // Agregar los resultados sin sobrescribir
-                Files.writeString(
-                        reporte,
-                        fila,
-                        StandardOpenOption.APPEND);
-
-                System.out.println(
-                        "[CSV] Métricas CP02 guardadas en: "
-                                + reporte.toAbsolutePath());
-
-            } catch (IOException e) {
-                throw new IllegalStateException(
-                        "No se pudieron guardar las métricas CP02",
-                        e);
+    private void leerContadoresConciliacion(String idProceso) {
+        WebDriverWait espera = crearEspera(Duration.ofSeconds(60));
+        espera.until(d -> {
+            for (WebElement name : d.findElements(CuentasSelectors.ID_PROCESO)) {
+                if (name.isDisplayed() && name.getText().trim().equals(idProceso)) { name.click(); return true; }
             }
+            return false;
+        });
+        for (var entry : java.util.Map.of(
+                "ConciliacionesTotales", CuentasSelectors.CONCILIACIONES_TOTALES,
+                "ConciliacionesRealizadas", CuentasSelectors.CONCILIACIONES_REALIZADAS).entrySet()) {
+            String text = espera.until(d -> {
+                for (WebElement field : d.findElements(entry.getValue())) {
+                    if (field.isDisplayed() && !field.getText().isBlank()) return field.getText().trim();
+                }
+                return null;
+            });
+            BrowserConciliationReport.set(entry.getKey(), Long.parseLong(text.replace(",", "").replaceAll("\\s+", "")));
         }
     }
-
 
 }

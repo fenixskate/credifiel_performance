@@ -25,6 +25,7 @@ public class LoginSteps {
 
     @Dado("El usuario inicia sesion con {string}")
     public void iniciarSesionConUsuario(String usuario) {
+        automation.utils.BrowserConciliationReport.set("Usuario", usuario);
         if (UserSessions.enabled()) {
             UserSessions.acquire(usuario);
             actions().resumeOrLogin(usuario);
