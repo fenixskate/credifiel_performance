@@ -6,8 +6,7 @@ import org.openqa.selenium.By;
 public class FacturacionSelectors {
 
     public static final By MENU_INICIO =
-            By.cssSelector(
-                    "button[title='Menú de Inicio']");
+            LoginSelectors.MENU_INICIO;
 
     public static final By APP_DOMICILIACION =
             By.cssSelector(

@@ -8,7 +8,7 @@ public final class MovimientosSelectors {
     private MovimientosSelectors() {}
 
     public static final By MENU_INICIO =
-            By.cssSelector("button[title='Menú de Inicio']");
+            LoginSelectors.MENU_INICIO;
 
     public static final By CUENTAS =
             By.cssSelector(

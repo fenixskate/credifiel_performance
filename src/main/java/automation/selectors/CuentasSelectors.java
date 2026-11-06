@@ -8,7 +8,7 @@ public final class CuentasSelectors {
     private CuentasSelectors() {}
 
     public static final By MENU_INICIO =
-            By.cssSelector("button[title='Menú de Inicio']");
+            LoginSelectors.MENU_INICIO;
 
     public static final By MENU_CUENTAS =
             By.xpath("//a[@data-menu-xmlid='vor_cuentas.menu_vor_act_root']");

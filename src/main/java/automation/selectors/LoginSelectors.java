@@ -45,7 +45,7 @@ public final class LoginSelectors {
             By.xpath("//input[@id='es_complemento']");
 
     public static final By MENU_INICIO =
-            By.xpath("//button[@title='Menú de Inicio']");
+            By.cssSelector(".o_main_navbar .o_navbar_apps_menu > button.dropdown-toggle");
 
     public static final By DETALLE_CUENTA =
             By.xpath("//*[normalize-space()='Nómina | Invex 2595']");

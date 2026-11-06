@@ -4,7 +4,7 @@ import org.openqa.selenium.By;
 
 public final class ReembolsosSelectors {
     private ReembolsosSelectors() {}
-    public static final By MENU_INICIO = By.cssSelector("button[title='Menú de Inicio']");
+    public static final By MENU_INICIO = LoginSelectors.MENU_INICIO;
     public static final By REEMBOLSOS = By.cssSelector("a[data-menu-xmlid='vor_cte_credifiel.vor_cf_reembolsos']");
     public static final By NUEVO = By.cssSelector("button.o-kanban-button-new, button.o_list_button_add");
     public static final By MASIVO = By.cssSelector("input[type='radio'][data-value='masivo']");
