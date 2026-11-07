@@ -6,6 +6,7 @@ import org.openqa.selenium.By;
 public final class LoginSelectors {
     public static final By USERNAME = By.xpath("//*[@id=\"login\"]");
     public static final By PASSWORD = By.xpath("//*[@id=\"password\"]");
+    public static final By ERROR_LOGIN = By.cssSelector("form.oe_login_form .alert.alert-danger[role='alert']");
     public static final By SUBMIT = By.xpath("//*[@id=\"wrapwrap\"]/main/div/form/div[3]/button");
 
     public static final By CARTERACREDITO = By.xpath("/html/body/header/nav/div[2]/div[2]/button");

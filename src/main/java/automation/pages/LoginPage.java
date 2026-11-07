@@ -10,10 +10,17 @@ public final class LoginPage {
 
     private final WebDriver driver;
     private final WaitUtils wait;
+    private final org.openqa.selenium.support.ui.WebDriverWait esperaInicio;
 
     public LoginPage(WebDriver driver) {
         this.driver = driver;
         this.wait = new WaitUtils(driver);
+        int segundos = Integer.getInteger("login.timeout.seconds",
+                Integer.getInteger("navigation.timeout.seconds", 120));
+        if (segundos <= 0) throw new IllegalArgumentException("login.timeout.seconds debe ser mayor que cero");
+        this.esperaInicio = new org.openqa.selenium.support.ui.WebDriverWait(driver,
+                java.time.Duration.ofSeconds(segundos));
+        this.esperaInicio.ignoring(org.openqa.selenium.StaleElementReferenceException.class);
     }
 
     public void open() {
@@ -36,10 +43,13 @@ public final class LoginPage {
             // Una imagen/recurso pendiente no debe invalidar un login ya renderizado.
             System.out.println("[LOGIN] Carga lenta; comprobando formulario o sesion antes de fallar");
         }
-        new org.openqa.selenium.support.ui.WebDriverWait(driver,
-                java.time.Duration.ofSeconds(Math.max(30, ConfigManager.positiveInt("timeout.explicit.seconds"))))
-                .until(d -> d.findElements(LoginSelectors.USERNAME).stream().anyMatch(org.openqa.selenium.WebElement::isDisplayed)
+        try {
+            esperaInicio.until(d -> d.findElements(LoginSelectors.USERNAME).stream().anyMatch(org.openqa.selenium.WebElement::isDisplayed)
                         || d.findElements(LoginSelectors.MENU_INICIO).stream().anyMatch(org.openqa.selenium.WebElement::isDisplayed));
+        } catch (org.openqa.selenium.TimeoutException failure) {
+            guardarErrorMenu(failure);
+            throw failure;
+        }
         return driver.findElements(LoginSelectors.USERNAME).stream().anyMatch(org.openqa.selenium.WebElement::isDisplayed);
     }
 
@@ -51,8 +61,31 @@ public final class LoginPage {
         wait.visible(LoginSelectors.PASSWORD).sendKeys(secret);
 
         wait.clickable(LoginSelectors.SUBMIT).click();
-        wait.visible(LoginSelectors.MENU_INICIO);
+        try {
+            esperaInicio.until(d -> {
+                        for (var error : d.findElements(LoginSelectors.ERROR_LOGIN)) {
+                            if (error.isDisplayed() && !error.getText().isBlank())
+                                throw new IllegalStateException("Odoo rechazo el acceso de " + user + ": " + error.getText().trim());
+                        }
+                        return d.findElements(LoginSelectors.MENU_INICIO).stream()
+                                .anyMatch(org.openqa.selenium.WebElement::isDisplayed);
+                    });
+        } catch (RuntimeException failure) {
+            guardarErrorMenu(failure);
+            throw failure;
+        }
     }
 
+    private void guardarErrorMenu(RuntimeException failure) {
+        try {
+            java.nio.file.Path carpeta = java.nio.file.Path.of("target", "login-errors", java.util.UUID.randomUUID().toString());
+            java.nio.file.Files.createDirectories(carpeta);
+            java.nio.file.Files.writeString(carpeta.resolve("pagina.html"), driver.getPageSource());
+            java.nio.file.Files.writeString(carpeta.resolve("url.txt"), driver.getCurrentUrl());
+            java.nio.file.Files.write(carpeta.resolve("pantalla.png"),
+                    ((org.openqa.selenium.TakesScreenshot) driver).getScreenshotAs(org.openqa.selenium.OutputType.BYTES));
+            System.out.println("[LOGIN] No se reconocio el menu. Evidencia: " + carpeta.toAbsolutePath());
+        } catch (Exception evidencia) { failure.addSuppressed(evidencia); }
+    }
 
 }

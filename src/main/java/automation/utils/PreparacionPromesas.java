@@ -28,20 +28,13 @@ public final class PreparacionPromesas {
         }
         if (encargado) {
             try {
-                Path runtime = Path.of(System.getProperty("promesas.runtime.root", Path.of(
-                        System.getProperty("user.home"), ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies").toString()));
-                Path python = runtime.resolve("python/python.exe");
-                Path node = runtime.resolve("node/bin/node.exe");
-                Path modules = runtime.resolve("node/node_modules");
-                if (!Files.isRegularFile(python) || !Files.isRegularFile(node) || !Files.isDirectory(modules))
-                    throw new IllegalStateException("No se encontró el runtime de hojas de cálculo; configura promesas.runtime.root");
                 Path trabajo = Path.of("target", "preparacion-promesas", UUID.randomUUID().toString()).toAbsolutePath();
                 Files.createDirectories(trabajo);
                 System.out.println("[PREPARACION PROMESAS] Generando Universo y actualizando "+cantidad+" archivos una sola vez");
                 Path reporte = new UniversoCarteraPage(driver).generarYDescargar();
-                ejecutar(trabajo, "seleccion", python.toString(), "scripts/promesas/preparar.py", reporte.toString(), trabajo.toString(),String.valueOf(cantidad));
-                ejecutar(trabajo, "generacion", node.toString(), "scripts/promesas/generar.mjs", trabajo.toString(), modules.toString());
-                ejecutar(trabajo, "verificacion", python.toString(), "scripts/promesas/verificar_publicar.py", trabajo.toString());
+                Path templates = Path.of("Documentos", "Insumos Flujo 4", "Template");
+                PromesasExcelUtils.preparar(reporte, trabajo, templates.resolve("Generados"),
+                        templates.resolve("Respaldos"), templates.resolve("Generados"), cantidad);
                 resultado.complete(trabajo);
                 System.out.println("[PREPARACION PROMESAS] LISTO: "+cantidad+" archivos, 500 activos por archivo, "+(cantidad*500)+" creditos unicos");
             } catch (Exception | Error failure) {
@@ -66,20 +59,4 @@ public final class PreparacionPromesas {
         throw new IllegalStateException("Se agotó el tiempo de preparación compartida de promesas");
     }
 
-    private static void ejecutar(Path trabajo, String etapa, String... comando) throws Exception {
-        Path log = trabajo.resolve(etapa + ".log");
-        Process process = new ProcessBuilder(comando).redirectErrorStream(true).redirectOutput(log.toFile()).start();
-        long limite = System.nanoTime() + Duration.ofMinutes(30).toNanos();
-        try {
-            while (!process.waitFor(30, TimeUnit.SECONDS)) {
-                System.out.println("[PREPARACION PROMESAS] " + etapa + " en curso | " + log);
-                if (System.nanoTime() >= limite) throw new IllegalStateException("Tiempo agotado en " + etapa);
-            }
-            if (process.exitValue() != 0)
-                throw new IllegalStateException("Falló " + etapa + "; revisar " + log + "\n" + Files.readString(log));
-            System.out.println("[PREPARACION PROMESAS] " + etapa + " completada");
-        } finally {
-            if (process.isAlive()) process.destroyForcibly();
-        }
-    }
 }

@@ -22,7 +22,7 @@ public final class SessionSuiteSmoke {
                 exchange.getResponseHeaders().add("Set-Cookie", "session=user" + logins.incrementAndGet() + "; Path=/; HttpOnly");
                 authenticated = true;
             }
-            String html = authenticated ? "<button title='Menú de Inicio'>Inicio</button><div class='o_form_view'><span class='badge rounded-pill text-bg-success'>Terminado</span></div>"
+            String html = authenticated ? "<nav class='o_main_navbar'><div class='o_navbar_apps_menu'><button class='dropdown-toggle' title='Menú de Inicio'>Inicio</button></div></nav><div class='o_form_view'><span class='badge rounded-pill text-bg-success'>Terminado</span></div>"
                     : "<div id='wrapwrap'><main><div><form action='/signin'><div><input id='login'></div>"
                     + "<div><input id='password' type='password'></div><div><button>Entrar</button></div></form></div></main></div>";
             byte[] body = ("<!doctype html><meta charset='utf-8'>" + html).getBytes(StandardCharsets.UTF_8);
