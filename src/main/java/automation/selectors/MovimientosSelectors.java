@@ -51,6 +51,12 @@ public final class MovimientosSelectors {
     public static final By ESTATUS =
             By.cssSelector("td[name='estatus']");
 
+    public static final By TOTAL_ARCHIVO = By.cssSelector(".o_form_view div[name='total_transacciones_archivo']");
+    public static final By TOTAL_CARGADAS = By.cssSelector(".o_form_view div[name='total_transacciones_cargadas']");
+    public static final By TOTAL_DUPLICADAS = By.cssSelector(".o_form_view div[name='total_transacciones_duplicadas']");
+    public static final By TOTAL_IMPORTADAS = By.cssSelector(".o_form_view div[name='total_transacciones_importadas']");
+    public static final By TOTAL_FALLIDAS = By.cssSelector(".o_form_view div[name='total_transacciones_fallidas']");
+
 
     public static final By MENU_MOVIMIENTOS_NO_CONCILIADOS =
             By.cssSelector(

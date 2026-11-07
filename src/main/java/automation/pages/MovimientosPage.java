@@ -30,11 +30,12 @@ public class MovimientosPage {
     private String usuario;
     private String archivoGenerado;
 
-    private int registrosEsperados;
+    private int registrosEsperados = automation.utils.PromesasExcelUtils.REGISTROS;
 
     private long inicioCarga;
     private long finCarga;
     private long inicioImportacion;
+    private LocalDateTime importacionSolicitada;
 
     private String fechaExportacion;
     private String nombreArchivoExportado;
@@ -185,6 +186,7 @@ public class MovimientosPage {
     public void importarTransacciones() {
 
         inicioImportacion = System.nanoTime();
+        importacionSolicitada = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
 
         elements.click(MovimientosSelectors.IMPORTAR_TRANSACCIONES);
 
@@ -217,90 +219,42 @@ public class MovimientosPage {
         esperarEstado("Importado", Duration.ofMinutes(15));
     }
 
-    private void esperarEstado(
-            String esperado, Duration tiempoMaximo) {
-
+    private void esperarEstado(String esperado, Duration tiempoMaximo) {
         long limite = System.nanoTime() + tiempoMaximo.toNanos();
-
-        automation.utils.AsyncRefresh updates = new automation.utils.AsyncRefresh(driver);
+        automation.utils.AsyncRefresh updates = new automation.utils.AsyncRefresh(driver, Duration.ofSeconds(2));
         while (System.nanoTime() < limite) {
-
             try {
-                List<WebElement> filas = wait.until(d -> {
-                    List<WebElement> encontradas =
-                            d.findElements(MovimientosSelectors.FILAS);
-
-                    return encontradas.isEmpty()
-                            ? null : encontradas;
-                });
-
-                int total = filas.size();
-                int correctos = 0;
-                int duplicados = 0;
-                int fallidos = 0;
-
-                Map<String, Integer> estados = new LinkedHashMap<>();
-
-                for (WebElement fila : filas) {
-
-                    String estado = fila.findElement(
-                                    MovimientosSelectors.ESTATUS)
-                            .getText().trim();
-
-                    estados.merge(estado, 1, Integer::sum);
-
-                    if (estado.equalsIgnoreCase(esperado)) {
-                        correctos++;
-                    }
-
-                    if (estado.equalsIgnoreCase("Duplicado")) {
-                        duplicados++;
-                    }
-
-                    if (estado.equalsIgnoreCase("Fallido")
-                            || estado.equalsIgnoreCase("Error")) {
-                        fallidos++;
-                    }
-                }
-
-                if (registrosEsperados == 0) {
-                    registrosEsperados = total;
-                }
-
-                System.out.println(
-                        "[AZTECA] Esperado: " + esperado +
-                                " | Registros=" + total +
-                                " | Estados=" + estados);
-
-                if (duplicados > 0 || fallidos > 0) {
-                    throw new AssertionError(
-                            "Existen registros no importables. " +
-                                    "Duplicados=" + duplicados +
-                                    ", fallidos=" + fallidos +
-                                    ", estados=" + estados);
-                }
-
-                if (total == registrosEsperados
-                        && correctos == registrosEsperados) {
-
-                    System.out.println(
-                            "[OK] " + correctos +
-                                    " movimientos en estado " + esperado);
+                int total = contador(MovimientosSelectors.TOTAL_ARCHIVO);
+                int cargadas = contador(MovimientosSelectors.TOTAL_CARGADAS);
+                int importadas = contador(MovimientosSelectors.TOTAL_IMPORTADAS);
+                int duplicadas = contador(MovimientosSelectors.TOTAL_DUPLICADAS);
+                int fallidas = contador(MovimientosSelectors.TOTAL_FALLIDAS);
+                System.out.println("[AZTECA] Esperado: " + esperado + " | Archivo=" + total
+                        + " | Cargadas=" + cargadas + " | Importadas=" + importadas
+                        + " | Duplicadas=" + duplicadas + " | Fallidas=" + fallidas);
+                if (duplicadas > 0 || fallidas > 0)
+                    throw new AssertionError("Movimientos AZTECA rechazados: duplicados=" + duplicadas + ", fallidos=" + fallidas);
+                if (total > registrosEsperados || cargadas > total || importadas > cargadas)
+                    throw new AssertionError("Contadores AZTECA inconsistentes; se esperan " + registrosEsperados + " movimientos");
+                int procesadas = "Cargado".equals(esperado) ? cargadas : importadas;
+                if (total == registrosEsperados && procesadas == registrosEsperados) {
+                    System.out.println("[OK] " + procesadas + "/" + registrosEsperados + " movimientos procesados: " + esperado);
                     return;
                 }
-
-            } catch (StaleElementReferenceException e) {
-                System.out.println(
-                        "[ESPERANDO] Se actualizó la tabla de Odoo");
+            } catch (StaleElementReferenceException | NoSuchElementException updating) {
+                System.out.println("[ESPERANDO] Odoo actualizando los contadores AZTECA");
             }
-
             updates.poll();
         }
-
-        throw new AssertionError(
-                "Tiempo agotado esperando el estado " + esperado);
+        throw new AssertionError("Tiempo agotado esperando " + registrosEsperados + " movimientos " + esperado);
     }
 
+    private int contador(By selector) {
+        String texto = driver.findElement(selector).getText().trim().replaceAll("[\\s,.]", "");
+        int valor = Integer.parseInt(texto);
+        if (valor < 0) throw new AssertionError("Contador negativo: " + selector);
+        return valor;
+    }
     private static double segundos(long inicio, long fin) {
         return (fin - inicio) / 1_000_000_000.0;
     }
@@ -673,10 +627,7 @@ public class MovimientosPage {
         }
 
         // Carpeta de descargas del navegador
-        Path carpetaDescargas = Path.of(
-                System.getProperty("user.home"),
-                "Downloads"
-        );
+        Path carpetaDescargas = automation.driver.DriverManager.downloadDirectory(driver);
 
         Path ruta = carpetaDescargas.resolve(nombreArchivoExportado);
 
@@ -737,14 +688,9 @@ public class MovimientosPage {
 
                         Files.createDirectories(carpetaDestino);
 
-                        Path destino = carpetaDestino.resolve(
-                                nombreArchivoExportado);
-
-                        if (Files.exists(destino)) {
-                            throw new IOException(
-                                    "Ya existe el archivo de destino: "
-                                            + destino);
-                        }
+                        Path carpetaUsuario = carpetaDestino.resolve(UUID.randomUUID().toString());
+                        Files.createDirectories(carpetaUsuario);
+                        Path destino = carpetaUsuario.resolve(nombreArchivoExportado);
 
                         // Mover archivo al Flujo 4
                         descargaExportada = Files.move(
@@ -814,6 +760,15 @@ public class MovimientosPage {
         System.out.println(
                 "[EXCEL] Template seleccionado: "
                         + archivoPromesas.getFileName());
+
+        if (importacionSolicitada == null || registrosEsperados < 1)
+            throw new IllegalStateException("Falta la identificacion de la importacion AZTECA actual");
+        int excluidos = MovimientosCreditoUtils.filtrarExportacion(descargaExportada,
+                "Extrajudicial | Azteca 8646",
+                LocalDate.parse(fechaExportacion, DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                importacionSolicitada, registrosEsperados);
+        System.out.println("[EXCEL] Exportacion de esta carga: " + registrosEsperados
+                + " movimientos; excluidos de otras cargas/cuentas: " + excluidos);
 
         // Agregar créditos al archivo AZTECA descargado
         int total = MovimientosCreditoUtils.agregarCreditos(
@@ -931,7 +886,7 @@ public class MovimientosPage {
         WebDriverWait espera = new WebDriverWait(
                 driver, Duration.ofSeconds(30));
 
-        automation.utils.AsyncRefresh updates = new automation.utils.AsyncRefresh(driver);
+        automation.utils.AsyncRefresh updates = new automation.utils.AsyncRefresh(driver, Duration.ofSeconds(2));
         while (System.nanoTime() < limite) {
 
             try {
@@ -962,7 +917,10 @@ public class MovimientosPage {
                                 + " | Rechazadas: " + rechazadas
                                 + " | Analizadas: " + procesadas);
 
-                if (total > 0 && procesadas == total) {
+                if (total > registrosEsperados || validas < 0 || rechazadas < 0 || procesadas > total)
+                    throw new AssertionError("Contadores inconsistentes en importacion de movimientos");
+
+                if (total == registrosEsperados && procesadas == registrosEsperados) {
 
                     System.out.println(
                             "[OK] Análisis de importación finalizado");

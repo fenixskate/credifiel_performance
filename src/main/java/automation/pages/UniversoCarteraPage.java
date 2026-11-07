@@ -59,7 +59,7 @@ public final class UniversoCarteraPage {
                     .stream().anyMatch(e -> Set.of("running","done").contains(e.getDomAttribute("raw-value"))));
             progress("export_state","export_done_rows","export_total_rows","export_pct","export_msg");
             Files.write(folder.resolve("exportacion-completa.png"),((TakesScreenshot)driver).getScreenshotAs(OutputType.BYTES));
-            Path downloads=Path.of(System.getProperty("user.home"),"Downloads");
+            Path downloads=automation.driver.DriverManager.downloadDirectory(driver);
             Map<Path,java.nio.file.attribute.FileTime> before=new HashMap<>();
             try(var paths=Files.list(downloads)) {
                 for(Path p:paths.filter(Files::isRegularFile).toList()) before.put(p,Files.getLastModifiedTime(p));

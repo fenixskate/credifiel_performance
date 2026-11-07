@@ -18,6 +18,25 @@ public final class ExtrajudicialNavigationSmoke {
                 tasks.add(pool.submit(() -> {
                     try {
                         new LoginSteps().iniciarSesionConUsuario(user);
+                        String layout = System.getProperty("verification.layout.id");
+                        if (layout != null) {
+                            if (!layout.matches("[0-9]+")) throw new IllegalArgumentException("ID de layout invalido");
+                            var driver = DriverManager.getDriver();
+                            driver.get(java.net.URI.create(config.ConfigManager.get("base.url"))
+                                    .resolve("/web#id=" + layout + "&model=vor.importacion.layout.bancario&view_type=form").toString());
+                            new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(60))
+                                    .until(d -> !d.findElements(org.openqa.selenium.By.cssSelector(".o_form_view .o_form_sheet")).isEmpty());
+                            try {
+                                java.nio.file.Files.writeString(java.nio.file.Path.of("target", "azteca-form-inspect.html"), driver.getPageSource());
+                            } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+                            for (var field : driver.findElements(org.openqa.selenium.By.cssSelector(".o_form_view [name]"))) {
+                                String name = field.getDomAttribute("name");
+                                if (name.contains("total") || name.contains("count") || name.equals("estatus"))
+                                    System.out.println("CAMPO " + name + " = " + field.getText());
+                            }
+                            System.out.println("PASS: inspeccion del layout existente, sin modificarlo");
+                            return;
+                        }
                         var page = new MovimientosPage(DriverManager.getDriver());
                         page.ingresarCuentas();
                         page.seleccionarCuenta("Extrajudicial | Azteca 8646");

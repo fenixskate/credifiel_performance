@@ -3,6 +3,7 @@ package automation.utils;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 import java.io.*;
 import java.nio.file.*;
@@ -64,6 +65,8 @@ public final class MovimientosExcelUtils {
                         "No se encontraron las columnas de fechas");
             }
 
+            ajustarCantidadMovimientos((XSSFSheet) hoja, operacion, aplicacion);
+
             int modificadas = 0;
 
             for (int i = 1; i <= hoja.getLastRowNum(); i++) {
@@ -82,9 +85,10 @@ public final class MovimientosExcelUtils {
                 if (cambio) modificadas++;
             }
 
-            if (modificadas == 0) {
+            if (modificadas != PromesasExcelUtils.REGISTROS) {
                 throw new IOException(
-                        "No se modificó ninguna fecha del archivo");
+                        "AZTECA debe contener " + PromesasExcelUtils.REGISTROS
+                                + " movimientos con fechas; se prepararon " + modificadas);
             }
 
             try (OutputStream salida =
@@ -159,6 +163,65 @@ public final class MovimientosExcelUtils {
 
             return archivoUsuario.toString();
         }
+    }
+
+    private static void ajustarCantidadMovimientos(XSSFSheet hoja, int operacion, int aplicacion)
+            throws IOException {
+        Row encabezado = hoja.getRow(0);
+        int cuenta = buscarColumna(encabezado, "Número de Cuenta Bancaria");
+        int importe = buscarColumna(encabezado, "Importe de Movimiento");
+        int numero = buscarColumna(encabezado, "Numero de Movimiento");
+        int codigo = buscarColumna(encabezado, "Código de Operación");
+        if (cuenta < 0 || importe < 0 || numero < 0 || codigo < 0)
+            throw new IOException("AZTECA no contiene los encabezados de movimientos requeridos");
+
+        DataFormatter formato = new DataFormatter(Locale.ROOT);
+        List<Row> movimientos = new ArrayList<>();
+        Set<Long> identificadores = new HashSet<>();
+        long ultimoNumero = 0;
+        for (Row fila : hoja) {
+            if (fila.getRowNum() == 0) continue;
+            boolean conDatos = false;
+            for (Cell celda : fila) {
+                if (!formato.formatCellValue(celda).isBlank()) { conDatos = true; break; }
+            }
+            if (!conDatos) continue; // Las filas con estilos vacios no son movimientos.
+            for (int columna : new int[]{cuenta, importe, numero, codigo, operacion, aplicacion}) {
+                if (formato.formatCellValue(fila.getCell(columna)).isBlank())
+                    throw new IOException("Movimiento AZTECA incompleto en fila " + (fila.getRowNum() + 1));
+            }
+            Cell identificador = fila.getCell(numero);
+            long valor;
+            try {
+                valor = identificador.getCellType() == CellType.NUMERIC
+                        ? java.math.BigDecimal.valueOf(identificador.getNumericCellValue()).longValueExact()
+                        : new java.math.BigDecimal(identificador.getStringCellValue().trim()).longValueExact();
+            } catch (ArithmeticException | NumberFormatException e) {
+                throw new IOException("Numero de Movimiento invalido en " + identificador.getAddress(), e);
+            }
+            if (!identificadores.add(valor))
+                throw new IOException("Numero de Movimiento duplicado en AZTECA: " + valor);
+            ultimoNumero = Math.max(ultimoNumero, valor);
+            movimientos.add(fila);
+        }
+        int originales = movimientos.size();
+        int esperados = PromesasExcelUtils.REGISTROS;
+        if (originales == 0 || originales > esperados)
+            throw new IOException("AZTECA contiene " + originales + " movimientos; se requieren " + esperados);
+
+        int siguienteFila = movimientos.getLast().getRowNum() + 1;
+        for (int i = originales; i < esperados; i++) {
+            Row modelo = movimientos.get((i - originales) % originales);
+            int filaNueva = siguienteFila++;
+            hoja.copyRows(modelo.getRowNum(), modelo.getRowNum(), filaNueva, new CellCopyPolicy());
+            Cell identificador = hoja.getRow(filaNueva).getCell(numero);
+            try { ultimoNumero = Math.addExact(ultimoNumero, 1); }
+            catch (ArithmeticException e) { throw new IOException("Se agoto el Numero de Movimiento", e); }
+            if (identificador.getCellType() == CellType.STRING)
+                identificador.setCellValue(Long.toString(ultimoNumero));
+            else identificador.setCellValue((double) ultimoNumero);
+        }
+        System.out.println("[EXCEL] Movimientos AZTECA: " + originales + " -> " + esperados);
     }
 
     private static int buscarColumna(

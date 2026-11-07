@@ -19,7 +19,7 @@ import org.xml.sax.SAXException;
 
 /** Selecciona activos del Universo y prepara los templates sin procesos externos. */
 public final class PromesasExcelUtils {
-    private static final int REGISTROS = 500;
+    public static final int REGISTROS = 500;
     private PromesasExcelUtils() {}
 
     public static Path preparar(Path reporte, Path trabajo, Path templates, Path respaldos,

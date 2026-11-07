@@ -424,7 +424,7 @@ public class PromesasPage {
         int exitosos = 0;
         int fallidos = 0;
 
-        automation.utils.AsyncRefresh updates = new automation.utils.AsyncRefresh(driver);
+        automation.utils.AsyncRefresh updates = new automation.utils.AsyncRefresh(driver, Duration.ofSeconds(2));
         while (System.nanoTime() < limite) {
 
             try {
@@ -520,7 +520,7 @@ public class PromesasPage {
                         "[ESPERANDO] Odoo actualizó los contadores");
             }
 
-            // Conservamos el refresh cada 5 segundos
+            // Reconsultar cada 2 segundos hasta completar las 500 filas.
             updates.poll();
 
 

@@ -534,7 +534,7 @@ public class FacturacionPage {
         String nombre = enlace.getText().trim();
         if (nombre.isBlank() || !Path.of(nombre).getFileName().toString().equals(nombre))
             throw new IllegalStateException("Nombre de descarga inválido: " + nombre);
-        Path descargas = Path.of(System.getProperty("user.home"), "Downloads");
+        Path descargas = automation.driver.DriverManager.downloadDirectory(driver);
         java.util.Map<Path, java.nio.file.attribute.FileTime> anteriores = new java.util.HashMap<>();
         try (var archivos = Files.list(descargas)) {
             for (Path p : archivos.filter(Files::isRegularFile).toList()) anteriores.put(p, Files.getLastModifiedTime(p));

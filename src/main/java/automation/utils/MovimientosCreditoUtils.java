@@ -12,8 +12,72 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MovimientosCreditoUtils {
+
+    public static int filtrarExportacion(Path archivo, String cuenta, LocalDate fecha,
+                                         LocalDateTime importadaDesde, int esperados) throws IOException {
+        if (esperados < 1) throw new IllegalArgumentException("Layout sin movimientos importados");
+        Path temporal = Files.createTempFile(archivo.getParent(), "movimientos_filtrados_", ".xlsx");
+        int eliminados = 0;
+        try {
+            try (InputStream entrada = Files.newInputStream(archivo); Workbook libro = new XSSFWorkbook(entrada)) {
+                Sheet hoja = libro.getSheetAt(0);
+                int encabezado = buscarFilaEncabezado(hoja, "ID Movimiento");
+                int id = buscarColumna(hoja.getRow(encabezado), "ID Movimiento");
+                int propietario = buscarColumna(hoja.getRow(encabezado), "Cuenta");
+                int dia = buscarColumna(hoja.getRow(encabezado), "Fecha");
+                int importacion = buscarColumna(hoja.getRow(encabezado), "Fecha Importación");
+                if (propietario < 0 || dia < 0 || (importadaDesde != null && importacion < 0))
+                    throw new IOException("La exportacion no contiene Cuenta, Fecha o Fecha Importacion");
+                DataFormatter formato = new DataFormatter();
+                Set<String> ids = new HashSet<>();
+                List<Integer> excluir = new ArrayList<>();
+                for (int i = encabezado + 1; i <= hoja.getLastRowNum(); i++) {
+                    Row fila = hoja.getRow(i);
+                    if (fila == null) continue;
+                    String movimiento = formato.formatCellValue(fila.getCell(id)).trim();
+                    if (movimiento.isEmpty()) continue;
+                    boolean propia = normalizar(formato.formatCellValue(fila.getCell(propietario))).equals(normalizar(cuenta));
+                    if (propia) propia = fechaExcel(fila.getCell(dia)).toLocalDate().equals(fecha);
+                    if (propia && importadaDesde != null)
+                        propia = !fechaExcel(fila.getCell(importacion)).isBefore(importadaDesde);
+                    if (propia) {
+                        if (!ids.add(movimiento)) throw new IOException("Movimiento duplicado en exportacion: " + movimiento);
+                    } else excluir.add(i);
+                }
+                if (ids.size() != esperados)
+                    throw new IOException("La exportacion de " + cuenta + " para " + fecha + " contiene "
+                            + ids.size() + " movimientos de esta carga; se esperaban " + esperados);
+                for (int i = excluir.size() - 1; i >= 0; i--) {
+                    int fila = excluir.get(i), ultima = hoja.getLastRowNum();
+                    hoja.removeRow(hoja.getRow(fila));
+                    if (fila < ultima) hoja.shiftRows(fila + 1, ultima, -1);
+                }
+                eliminados = excluir.size();
+                if (eliminados > 0) try (OutputStream salida = Files.newOutputStream(temporal)) { libro.write(salida); }
+            }
+            if (eliminados > 0) Files.move(temporal, archivo, StandardCopyOption.REPLACE_EXISTING);
+            return eliminados;
+        } finally { Files.deleteIfExists(temporal); }
+    }
+
+    private static LocalDateTime fechaExcel(Cell celda) throws IOException {
+        if (celda == null || celda.getCellType() == CellType.BLANK) throw new IOException("Movimiento sin fecha");
+        if (celda.getCellType() == CellType.NUMERIC) return celda.getLocalDateTimeCellValue();
+        String texto = new DataFormatter().formatCellValue(celda).trim();
+        try {
+            if (texto.matches("\\d{4}-\\d{2}-\\d{2}")) return LocalDate.parse(texto).atStartOfDay();
+            if (texto.matches("\\d{2}/\\d{2}/\\d{4}"))
+                return LocalDate.parse(texto, DateTimeFormatter.ofPattern("dd/MM/yyyy")).atStartOfDay();
+            return LocalDateTime.parse(texto.replace(' ', 'T'), DateTimeFormatter.ISO_DATE_TIME);
+        } catch (java.time.format.DateTimeParseException e) { throw new IOException("Fecha invalida en exportacion: " + celda.getAddress(), e); }
+    }
 
 
     public static int agregarCreditos(
