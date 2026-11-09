@@ -4,6 +4,7 @@ import automation.driver.DriverManager;
 import automation.pages.LoginPage;
 import automation.selectors.LoginSelectors;
 import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -21,18 +22,30 @@ public final class LoginReadinessSmoke {
             menu = encabezado.group().replaceAll("<script\\b[\\s\\S]*?</script>", "");
         }
         String menuHtml = menu;
+        var enviosLentos = new java.util.concurrent.atomic.AtomicInteger();
         HttpServer servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         servidor.createContext("/", exchange -> {
             String ruta = exchange.getRequestURI().getPath();
+            if (ruta.equals("/imagen-lenta")) {
+                try { Thread.sleep(2500); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IOException(e); }
+                exchange.sendResponseHeaders(200, 1);
+                try (var salida = exchange.getResponseBody()) { salida.write(0); }
+                return;
+            }
             String error = ruta.equals("/rechazado")
                     ? "<p class='alert alert-danger' role='alert'>Nombre de usuario o contraseña incorrectos</p>" : "";
             String pagina;
-            if (ruta.equals("/demorado")) {
+            if (ruta.equals("/con-recurso-lento")) {
+                enviosLentos.incrementAndGet();
+                pagina = menuHtml + "<img src='/imagen-lenta'>";
+            } else if (ruta.equals("/demorado")) {
                 String literal = new org.openqa.selenium.json.Json().toJson(menuHtml);
                 pagina = "<div id='menu'></div><script>setTimeout(()=>document.getElementById('menu').innerHTML="
                         + literal + ",11000)</script>";
             } else {
-                String destino = ruta.equals("/login-invalido") ? "/rechazado" : "/demorado";
+                String destino = ruta.equals("/login-invalido") ? "/rechazado"
+                        : ruta.equals("/login-lento") ? "/con-recurso-lento" : "/demorado";
                 pagina = "<div id='wrapwrap'><main><div><form class='oe_login_form' action='" + destino + "'>"
                         + "<div><input id='login'></div><div><input id='password' type='password'></div>"
                         + "<div><button>Entrar</button></div>" + error + "</form></div></main></div>";
@@ -64,6 +77,12 @@ public final class LoginReadinessSmoke {
                 if (!esperado.getMessage().contains("Odoo rechazo el acceso de control-rechazado")) throw esperado;
             }
             System.out.println("PASS: rechazo de credenciales reportado sin confundirlo con ausencia del menu");
+            driver.get(base + "/login-lento");
+            driver.manage().timeouts().pageLoadTimeout(java.time.Duration.ofSeconds(1));
+            new LoginPage(driver).signIn("control-recurso-lento", "clave-local");
+            if (enviosLentos.get() != 1 || driver.findElements(LoginSelectors.MENU_INICIO).size() != 1)
+                throw new AssertionError("El login lento debe validarse sin reenviar credenciales");
+            System.out.println("PASS: recurso pendiente supera pageLoadTimeout; el menu se comprueba y las credenciales se envian una vez");
         } finally { DriverManager.quit(); servidor.stop(0); }
     }
 }

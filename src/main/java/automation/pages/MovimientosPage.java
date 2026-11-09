@@ -226,7 +226,7 @@ public class MovimientosPage {
             try {
                 int total = contador(MovimientosSelectors.TOTAL_ARCHIVO);
                 int cargadas = contador(MovimientosSelectors.TOTAL_CARGADAS);
-                int importadas = contador(MovimientosSelectors.TOTAL_IMPORTADAS);
+                int importadas = "Cargado".equals(esperado) ? 0 : contador(MovimientosSelectors.TOTAL_IMPORTADAS);
                 int duplicadas = contador(MovimientosSelectors.TOTAL_DUPLICADAS);
                 int fallidas = contador(MovimientosSelectors.TOTAL_FALLIDAS);
                 System.out.println("[AZTECA] Esperado: " + esperado + " | Archivo=" + total

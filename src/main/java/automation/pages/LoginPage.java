@@ -21,6 +21,7 @@ public final class LoginPage {
         this.esperaInicio = new org.openqa.selenium.support.ui.WebDriverWait(driver,
                 java.time.Duration.ofSeconds(segundos));
         this.esperaInicio.ignoring(org.openqa.selenium.StaleElementReferenceException.class);
+        this.esperaInicio.ignoring(org.openqa.selenium.TimeoutException.class);
     }
 
     public void open() {
@@ -60,7 +61,12 @@ public final class LoginPage {
         wait.visible(LoginSelectors.PASSWORD).clear();
         wait.visible(LoginSelectors.PASSWORD).sendKeys(secret);
 
-        wait.clickable(LoginSelectors.SUBMIT).click();
+        var enviar = wait.clickable(LoginSelectors.SUBMIT);
+        try {
+            enviar.click();
+        } catch (org.openqa.selenium.TimeoutException recursosPendientes) {
+            System.out.println("[LOGIN] Envio realizado; esperando formulario de error o menu sin reenviar credenciales");
+        }
         try {
             esperaInicio.until(d -> {
                         for (var error : d.findElements(LoginSelectors.ERROR_LOGIN)) {

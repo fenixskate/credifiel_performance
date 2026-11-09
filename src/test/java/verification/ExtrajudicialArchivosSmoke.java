@@ -57,6 +57,12 @@ public final class ExtrajudicialArchivosSmoke {
                 body = exchange.getRequestURI().getQuery().getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
                 exchange.getResponseHeaders().set("Content-Disposition", "attachment; filename=igual.xlsx");
+            } else if (path.equals("/cargado")) {
+                body = ("<div class='o_form_view'><div name='total_transacciones_archivo'>500</div>"
+                        + "<div name='total_transacciones_cargadas'>500</div>"
+                        + "<div name='total_transacciones_duplicadas'>0</div>"
+                        + "<div name='total_transacciones_fallidas'>0</div></div>").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
             } else if (path.equals("/contadores")) {
                 int procesadas = lecturas.getAndIncrement() == 0 ? 40 : 500;
                 String html = "<div class='o_form_view'><span>Procesando</span>"
@@ -97,6 +103,9 @@ public final class ExtrajudicialArchivosSmoke {
             System.out.println("PASS: dos navegadores descargan igual.xlsx simultaneamente sin mezclar archivos");
             DriverManager.start();
             var driver = DriverManager.getDriver();
+            driver.get(base + "/cargado");
+            new MovimientosPage(driver).validarCargado();
+            System.out.println("PASS: valida 500 cargadas sin exigir el contador de importadas que Odoo aun no muestra");
             driver.get(base + "/contadores");
             new MovimientosPage(driver).validarTransaccionesImportadas();
             if (lecturas.get() != 2) throw new AssertionError("Se aceptaron las 40 filas visibles sin esperar los 500 importados");
